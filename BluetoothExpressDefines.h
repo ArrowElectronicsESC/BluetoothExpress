@@ -3,21 +3,23 @@
 #ifndef BGXDefines_h
 #define BGXDefines_h
 
+
+#define BUS_MODE_PIN 6 //Default Pin for BGX13 Arduino Shield 
+//This will change the pin configuration for arduino only
+#define COMMAND_MODE digitalWrite(BUS_MODE_PIN, LOW)
+#define STREAM_MODE digitalWrite(BUS_MODE_PIN, HIGH)
+
 #define RX_PIN 4
 #define TX_PIN 5
 
 #define UART_BUFFER_SIZE 100
+#define RESET_UART_RX _uart_rx_write_ptr = 0
+
+#define READ_DELAY 5
 
 #define CMD_CLEAR_BONDING_INFO "clrb"
 
-char uart_send_buffer[UART_BUFFER_SIZE];
-char uart_buffer[UART_BUFFER_SIZE];
-// TODO: Rename uart_buffer_data to something more descriptive like
-// uart_buffer_write_pointer, and maybe make it a real char*
-int uart_buffer_data = 0;
-
 // TODO: Doc Strings!
-// TODO: Standardize Delay times with defines
 // TODO: Standardize functions that do nearly the same thing like advertiseHigh,
 //       advertiseLow, advertiseOff, etc...
 static const char stream[] = "STREAM_MODE";
@@ -33,7 +35,9 @@ enum BGX_states{
 	RUNNING
 };
 
-const char * inDirections[] = {
+
+
+static const char * inDirections[] = { 
     "in", //0
     "ipd", //1
     "ipu", //2
@@ -42,19 +46,19 @@ const char * inDirections[] = {
     "ipdw" //5
 };
 
-const char * outDirections[] = {
+static const char * outDirections[] = {
     "olo", //0
     "ohi", //1
     "hiz"  //2
 };
 
-const char * pushPullModes[] = {
+static const char * pushPullModes[] = {
     "pp", //0
     "od", //1
     "os"  //2
 };
 
-const char * driveStrengths[] = {
+static const char * driveStrengths[] = {
     "drvst", //0
     "drvwk" //1
 };

@@ -9,6 +9,7 @@ Add header details and liscence here
 
 #include "Arduino.h"
 #include <SoftwareSerial.h>
+#include "BluetoothExpressDefines.h"
 
 class BGX13
 {
@@ -17,6 +18,7 @@ class BGX13
     void serialConnect(long baud);
     int BGXRead(void);
     int printBGXBuffer(void);
+    void sendCommand(void);
     //adv - functions for advertising as a peripherial
   	void advertiseHigh(void);
   	void advertiseLow(void);
@@ -84,6 +86,9 @@ class BGX13
   private:
   	int _state;
     SoftwareSerial * _bgxSerial;
+    char _uart_tx_buffer[UART_BUFFER_SIZE];
+    char _uart_rx_buffer[UART_BUFFER_SIZE];
+    int _uart_rx_write_ptr = 0;
   	void waitForStreamMode(void);
     void setCommandMode(void);
 };
