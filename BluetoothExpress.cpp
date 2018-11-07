@@ -22,12 +22,30 @@ void BGX13::serialConnect(long baud){
   	; // wait for serial port to connect.
 	}
   _bgxSerial->listen();
+  delay(5);
+  _bgxSerial->println("fac D0CF5ED8FCE0"); //Set the indicator high when in stream mode
+  delay(500);
+  //ecb remoVE
   _bgxSerial->println("gfu 4 str_active"); //Set the indicator high when in stream mode
+  delay(5);
   _bgxSerial->println("set bu s c level"); //Set to Logic Level Bus Mode Control
-  _bgxSerial->println("gdi 0 olo"); //SET GPIO to out low-init
+  delay(5);
   _bgxSerial->println("gfu 0 str_select"); //set gpio as bus control
-  BGXRead();//ECB Remove This and replace above with command calls
-  RESET_UART_RX; //ECB TODO Macro for reset and privite
+  delay(5);
+  _bgxSerial->println("gdi 0 olo"); //SET GPIO to out low-init
+  delay(5);
+  _bgxSerial->println("gfu 2 stdio"); 
+  delay(5);
+  _bgxSerial->println("gdi 2 ipu");   
+  delay(5);
+  _bgxSerial->println("gfu 3 stdio"); 
+  delay(5);
+  _bgxSerial->println("gdi 3 ipu");  
+  delay(5);
+  
+
+  BGXRead();//ECB replace above with command calls
+  RESET_UART_RX; 
   delay(10);
   STREAM_MODE; //Sets stream mode
   delay(5);
@@ -68,92 +86,62 @@ int BGX13::BGXRead(void){
 
 int BGX13::printBGXBuffer(void){
   Serial.println(_uart_rx_buffer);
+  //gets and pushes _uart_rx_buffer to the UART
+}
+
+void BGX13::getBGXBuffer(char* data){
+  BGXRead();
+  strcpy(data, _uart_rx_buffer);
+  //gets and pushes _uart_rx_buffer
+}
+
+void BGX13::sendCommand(void) {
+  COMMAND_MODE; //Sets COMMAND mode
+  _bgxSerial->println(_uart_tx_buffer);
+  RESET_UART_RX;
+  BGXRead(); //Eat the output
+  STREAM_MODE; //Sets stream mode
 }
 
 void BGX13::advertiseHigh(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  _bgxSerial->println("adv high");
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, ADVERTISE_HIGH);
+  sendCommand();
 }
 
 void BGX13::advertiseLow(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  _bgxSerial->println("adv low");
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, ADVERTISE_LOW);
+  sendCommand();
 }
 
 void BGX13::advertiseOff(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  _bgxSerial->println("adv off");
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, ADVERTISE_OFF);
+  sendCommand();
 }
 
 
 void BGX13::clearBondingInfo(void) {
-  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "clrb");
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, CMD_CLEAR_BONDING_INFO);
   sendCommand();
 }
 
-void BGX13::sendCommand(void) {
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  _bgxSerial->println(_uart_tx_buffer);
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
-}
-//ecb tODO
-//int BGX13::connectToPeripheral(char* indexOrAddress){
-  // String command = "conn ";
-  // digitalWrite(6, LOW); //Sets COMMAND mode
-  // _bgxSerial->println(command.concat(indexOrAddress));
-  // _uart_rx_write_ptr = 0;
-  // BGXRead();
-  // for (i = 0; i < _uart_rx_write_ptr && i < 7; i++)
-  // {
-  //   if (_uart_rx_buffer[i] == success[i])
-  //   {
-  //     matchCount++;
-  //   }
-  // }
-  // digitalWrite(6, HIGH);
-  // if (matchCount > 4)
-  // {
-  //   return 0;
-  // }
-  // return -1;
-//}
-
 void BGX13::disconnect(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  _bgxSerial->println("dct ");
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, DISCONNECT);
+  sendCommand();
 }
 
 void BGX13::factoryReset(void){
-  String command = "fac ";
-  digitalWrite(6, LOW); //Sets COMMAND mode
+  String command = FACTORY_RESET;
+  COMMAND_MODE; //Sets COMMAND mode
   BGXRead();
   _uart_rx_write_ptr = 0;
-  _bgxSerial->println("get bl a");
-  //_bgxSerial->println("fac D0CF5ED8FCE0");
-  BGXRead();
-  // TODO: The 22 here is a magic number
-  // Also, be consistent with using 0x00 vs NULL
-  _uart_rx_buffer[22] = 0x00;
-  command += &_uart_rx_buffer[10];
+  _bgxSerial->println(GET_BT_ADDR);
+  //_bgxSerial->println("fac D0CF5ED8FCE0");  BGXRead();
+  _uart_rx_buffer[ADDRESS_INDEX] = NULL;
+  command += &_uart_rx_buffer[ADDRESS_INDEX];
   _bgxSerial->println(command);
   BGXRead();
-  digitalWrite(6, HIGH); //Sets stream mode
+  STREAM_MODE; //Sets stream mode
 }
-
 
 /* Directions are as follows:
    "in", //0
@@ -164,29 +152,23 @@ void BGX13::factoryReset(void){
     "ipdw" //5
 */
 void BGX13::gpioSetIn(int number, int direction, int debounce) {
-  // TODO consider using a sprintf here, if performance/memory become and issue
   String command = "gdi ";
   if (direction > 5) {
     return;
   }
   command += number;
-  command += ' ';
+  command += SPACE;
   command += inDirections[direction];
-  command += ' ';
+  command += SPACE;
 
   if (debounce >= 0 && debounce < 10) {
     command += "db";
     command += debounce;
   }
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead();
-  _uart_rx_write_ptr = 0;
-  _bgxSerial->println(command);
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
-}
 
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  sendCommand();
+}
 
 /* Directions are as follows:
     "olo", //0
@@ -209,123 +191,84 @@ void BGX13::gpioSetOut(int number, int direction, int mode, int pullResistor, in
   if(driveStrength > 1) return;
   if(mode > 0 && direction == 2) return;
   command += number;
-  command += ' ';
+  command += SPACE;
   command += outDirections[direction];
-  //command += ' ';
+  //command += SPACE;
   //command += pushPullModes[mode];
   if (mode == 1 || mode == 2) {
-    command += ' ';
+    command += SPACE;
     if (pullResistor) {
       command += "pren";
     } else {
       command += "prdi";
     }
-    command += ' ';
+    command += SPACE;
     command += driveStrengths[driveStrength];
   }
 
-  // TODO: There is a similar block of code in gpioSetIn, maybe it could be commonized
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead();
-  _uart_rx_write_ptr = 0;
-  _bgxSerial->println(command);
-  _uart_rx_write_ptr = 0;
-  BGXRead(); //Eat the output
-  digitalWrite(6, HIGH); //Sets stream mode
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  sendCommand();
 }
 
 void BGX13::reboot(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("reboot"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, REBOOT);
+  sendCommand();
 }
 
 void BGX13::saveConfiguration(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("save"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SAVE);
+  sendCommand();
 }
 
 void BGX13::sleepMode(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("sleep"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SLEEP);
+  sendCommand();
 }
 
 void BGX13::streamMode(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("str"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SET_STREAM_MODE);
+  sendCommand();
 }
 
 void BGX13::updateUartSettings(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("uartu"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, UPDATE_UART_SETTINGS);
+  sendCommand();
 }
 
 void BGX13::userFunctionAssign(int number, char* function){
   String command = "ufu ";
   command += number;
-  command += " ";
+  command += SPACE;
   command += function;
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println(command); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  sendCommand();
 }
 
 void BGX13::getLastUserFunctionResult(){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println("ulast"); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, GET_LAST_USER_FUNC_STATUS);
+  sendCommand();
 }
 
 void BGX13::userFunctionRun(int number){
   String command = "urun ";
   command += number;
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead(); //clears UART
-  _uart_rx_write_ptr = 0; //Reset buffer
-  _bgxSerial->println(command); 
-  BGXRead();
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  sendCommand();
 }
 
-/**********************************************
-* Function: getVersion
-* Params:
-* Description:
-* Returns: 
-***********************************************/ 
 void BGX13::getVersion(char *ver){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead();
+  COMMAND_MODE; //Sets COMMAND mode
+  BGXRead(); //needed to ensure the buffer is clear
   _uart_rx_write_ptr = 0;
   _bgxSerial->println("ver");
   BGXRead();
-  strcpy(ver, &_uart_rx_buffer[5]);
-  digitalWrite(6, HIGH); //Sets stream mode
+  strcpy(ver, &_uart_rx_buffer[VERSION_BEGIN]);
+  STREAM_MODE; //Sets stream mode
 }
 
 void BGX13::wake(void){
-  digitalWrite(6, LOW); //Sets COMMAND mode
-  BGXRead();
-  _uart_rx_write_ptr = 0;
-  _bgxSerial->println("wake");
-  BGXRead();  
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, WAKE);
+  sendCommand(); 
 }
 
 

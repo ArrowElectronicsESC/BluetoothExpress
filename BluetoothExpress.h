@@ -18,6 +18,7 @@ class BGX13
     void serialConnect(long baud);
     int BGXRead(void);
     int printBGXBuffer(void);
+    void getBGXBuffer(char* data);
     void sendCommand(void);
     //adv - functions for advertising as a peripherial
   	void advertiseHigh(void);
