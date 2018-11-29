@@ -8,18 +8,28 @@ Add header details and liscence here
 
 
 #include "Arduino.h"
-#include <SoftwareSerial.h>
+
 #include "BluetoothExpressDefines.h"
+
+#if defined(ARDUINO_AVR_UNO)
+  #include <SoftwareSerial.h>
+#else
+  #define TWCR 0
+#endif
 
 class BGX13
 {
   public:
+#if defined(ARDUINO_AVR_UNO)
   	BGX13(SoftwareSerial * arduinoSoftwareSerial); //Initialize the BGX connection
+#endif
+    BGX13(HardwareSerial  *arduinoHardwareSerial);
     void serialConnect(long baud);
     int BGXRead(void);
     int printBGXBuffer(void);
     void getBGXBuffer(char* data);
-    void sendCommand(void);
+    void sendCommand(int readTime);
+    void sendString(char* toSend);
     //adv - functions for advertising as a peripherial
   	void advertiseHigh(void);
   	void advertiseLow(void);
@@ -62,7 +72,7 @@ class BGX13
     void saveConfiguration(void);
   	//void saveConfiguration(void);
   	//scan - oh god
-  	//void scan(void);
+  	void scan(int timeScan);
   	//set
   	//sleep
     void sleepMode(void);
@@ -86,12 +96,14 @@ class BGX13
 
   private:
   	int _state;
-    SoftwareSerial * _bgxSerial;
+    Stream *_bgxSerial;
     char _uart_tx_buffer[UART_BUFFER_SIZE];
     char _uart_rx_buffer[UART_BUFFER_SIZE];
     int _uart_rx_write_ptr = 0;
   	void waitForStreamMode(void);
     void setCommandMode(void);
+    void serialBegin(long baud);
+    bool _swSerial = false;
 };
 
 

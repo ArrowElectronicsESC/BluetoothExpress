@@ -13,6 +13,7 @@ gpioSetIn					KEYWORD2
 gpioSetOut					KEYWORD2
 reboot						KEYWORD2
 saveConfiguration			KEYWORD2
+scan 						KEYWORD2
 sleepMode					KEYWORD2
 streamMode					KEYWORD2
 updateUartSettings			KEYWORD2

@@ -5,25 +5,55 @@ Add header details and liscence here
 
 #include "Arduino.h"
 #include "BluetoothExpress.h"
-#include <SoftwareSerial.h>
+
+#if defined(ARDUINO_AVR_UNO)
+  #include <SoftwareSerial.h>
+#else
+#endif
 //#include "BluetoothExpressDefines.h"
 
-
-BGX13::BGX13(SoftwareSerial *arduinoSoftwareSerial){
+#if defined(ARDUINO_AVR_UNO)
+BGX13::BGX13(SoftwareSerial *arduinoSoftSerial){
 	_state = 0;
-  _bgxSerial = arduinoSoftwareSerial;
+  _bgxSerial = arduinoSoftSerial;
   pinMode(BUS_MODE_PIN, OUTPUT);
+  _swSerial = true;
+  COMMAND_MODE; //Sets command mode
+}
+#endif
+
+BGX13::BGX13(HardwareSerial  *arduinoHardwareSerial){
+  _state = 0;
+  _bgxSerial = arduinoHardwareSerial;
+  pinMode(BUS_MODE_PIN, OUTPUT);
+  _swSerial = false;
   COMMAND_MODE; //Sets command mode
 }
 
+void BGX13::serialBegin(long baud) {
+  if(_swSerial){
+  #if defined(ARDUINO_AVR_UNO)
+    static_cast<SoftwareSerial*>(_bgxSerial)->begin(baud);
+    static_cast<SoftwareSerial*>(_bgxSerial)->listen();
+  #endif
+  } else {
+    static_cast<HardwareSerial*>(_bgxSerial)->begin(baud);
+  }
+
+  while (!_bgxSerial) {
+    ; // wait for serial port to connect.
+  }
+}
+
+
 void BGX13::serialConnect(long baud){
-  _bgxSerial->begin(baud);
-	while (!_bgxSerial) {
-  	; // wait for serial port to connect.
-	}
-  _bgxSerial->listen();
+
+
+  serialBegin(baud);
   delay(5);
+  //_bgxSerial->println("clrb");
   _bgxSerial->println("fac D0CF5ED8FCE0"); //Set the indicator high when in stream mode
+  //factoryReset();
   delay(500);
   //ecb remoVE
   _bgxSerial->println("gfu 4 str_active"); //Set the indicator high when in stream mode
@@ -72,35 +102,68 @@ void BGX13::waitForStreamMode(void) {
 
 int BGX13::BGXRead(void){
   int byte_counter;
-  _bgxSerial->listen();
   delay(READ_DELAY);
   int bytes_available = _bgxSerial->available();
   
-  for (byte_counter = 0; byte_counter < bytes_available; byte_counter++) {
-    _uart_rx_buffer[_uart_rx_write_ptr++]=_bgxSerial->read();
+  //for (byte_counter = 0; byte_counter < bytes_available; byte_counter++) {
+  //  _uart_rx_buffer[_uart_rx_write_ptr++]=_bgxSerial->read();
+  //}
+
+  char next_char = _bgxSerial->read();
+  while (next_char != -1 && _uart_rx_write_ptr < UART_BUFFER_SIZE) {
+    _uart_rx_buffer[_uart_rx_write_ptr++] = next_char;
+    next_char = _bgxSerial->read();
+    //delay(10);
   }
+
   _uart_rx_buffer[_uart_rx_write_ptr] = NULL;
 
-  return 0;
+  return bytes_available;
 }
 
+//MUST HAVER SERIAL INITIALIZED PRIOR TO USE _ FOR DEBUG ONLY
 int BGX13::printBGXBuffer(void){
-  Serial.println(_uart_rx_buffer);
+  if(_uart_rx_write_ptr > 0){
+    Serial.println(_uart_rx_buffer);
+    _uart_rx_write_ptr=0;
+  }
   //gets and pushes _uart_rx_buffer to the UART
 }
 
 void BGX13::getBGXBuffer(char* data){
   BGXRead();
   strcpy(data, _uart_rx_buffer);
-  //gets and pushes _uart_rx_buffer
+  _uart_rx_write_ptr = 0;
+  //gets and pushes _uart_rx_buffer to passed string
 }
 
-void BGX13::sendCommand(void) {
+
+
+void BGX13::sendCommand(int readTime = 0) {
   COMMAND_MODE; //Sets COMMAND mode
+  BGXRead();
+  _uart_rx_write_ptr=0;
   _bgxSerial->println(_uart_tx_buffer);
   RESET_UART_RX;
-  BGXRead(); //Eat the output
+
+  unsigned long start = millis();
+  do
+  {
+    BGXRead();
+  }while ((millis() - start) < readTime);
+  //BGXRead(); //Eat the output
+
+  
   STREAM_MODE; //Sets stream mode
+}
+
+void BGX13::sendString(char* toSend) {
+  STREAM_MODE; //Sets COMMAND mode
+  BGXRead();
+  _uart_rx_write_ptr = 0;
+  _bgxSerial->println(toSend);
+  RESET_UART_RX;
+  BGXRead(); //Eat the output
 }
 
 void BGX13::advertiseHigh(void){
@@ -218,6 +281,11 @@ void BGX13::reboot(void){
 void BGX13::saveConfiguration(void){
   snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SAVE);
   sendCommand();
+}
+
+void BGX13::scan(int timeScan = 0){
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SCAN);
+  sendCommand(timeScan);
 }
 
 void BGX13::sleepMode(void){

@@ -4,6 +4,7 @@
 #define BGXDefines_h
 
 
+
 #define BUS_MODE_PIN 6 //Default Pin for BGX13 Arduino Shield 
 //This will change the pin configuration for arduino only
 #define COMMAND_MODE digitalWrite(BUS_MODE_PIN, LOW)
@@ -12,7 +13,7 @@
 #define RX_PIN 4
 #define TX_PIN 5
 
-#define UART_BUFFER_SIZE 100
+#define UART_BUFFER_SIZE 200
 #define RESET_UART_RX _uart_rx_write_ptr = 0
 
 #define READ_DELAY 5
@@ -28,10 +29,11 @@
 #define DISCONNECT					"dct"
 #define FACTORY_RESET				"fac "
 #define GET_BT_ADDR					"get bl a"
-#define REBOOT						"REBOOT"
-#define SAVE						"SAVE"
-#define SLEEP						"SLEEP"
-#define SET_STREAM_MODE				"STR"
+#define REBOOT						"reboot"
+#define SCAN 						"scan"
+#define SAVE						"save"
+#define SLEEP						"sleep"
+#define SET_STREAM_MODE				"str"
 #define UPDATE_UART_SETTINGS		"uartu"
 #define GET_LAST_USER_FUNC_STATUS	"ulast"
 #define WAKE						"wake"
