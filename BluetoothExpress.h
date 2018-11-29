@@ -36,44 +36,29 @@ class BGX13
   	void advertiseOff(void);
   	//clrb - Deletes all bonding information
   	void clearBondingInfo(void); 
-  	//con - Connect to a peripherial; see functions for returns
-  	//int connectToPeripheral(char* indexOrAddress); //ECB TODO
-  	//int connectToPeripheralWTimeout(char* indexOrAddress, int timeout); //ECB TODO
   	//dct - Disconnect from Peripherial or Central
   	void disconnect(void);
-  	//dtm - device test mode
-  	//void deviceTestModeStartRX(int channel, int phy); //ECB TODO
-  	//void deviceTestModeStartTX(int channel, int phy, int packetType, int length); //ECB TODO 
-  	//void deviceTestModeStop(void); //ECB TODO
   	//fac - Factory Rest
   	void factoryReset(void);
   	//gdi - Set GPIO direction and pin mode
-  	void gpioSetIn(int number, int direction, int debounce);
-  	void gpioSetOut(int number, int direction, int mode, int pullResistor, int driveStrength);
-  	//gdis
-  	//void gpioSetAll(long direction); 
+  	void gpioSetIn(int number, BGX_input_direction direction, int debounce=-1);
+  	void gpioSetOut(int number, BGX_output_direction direction, int mode=-1, bool enablePullResistor=true, int driveStrength=0);
   	//get - Get the value of a variable
-  	//char* getVariable(char* variable);
+  	void getVariable(char *variable, char *buffer, int length);
   	//gfu - Select GPIO Function
-  	//void selectGPIOFunction(int number, int function);
+  	void selectGPIOFunction(int gpioNumber, char *function);
   	//gge - Get GPIO value
-  	//int readGPIOValue(int number);
-  	//gges - read all GPIO values
-  	//char* readAllGPIOValues(void);
+  	int getGPIOValue(int number);
   	//gse - Set Gpio Value
-  	//void setGPIOValue(int number, int value);
-  	//gses - Set multiple GPIO values
-  	//Not implimented currently
-  	//rbmode - Change Remote Peripherial Bus Mode
-  	//Not implimented currently
+  	void setGPIOValue(int number, int value);
   	//reboot - Restart the device
   	void reboot(void);
   	//save
     void saveConfiguration(void);
-  	//void saveConfiguration(void);
-  	//scan - oh god
+  	//scan
   	void scan(int timeScan);
   	//set
+    void setVariable(char *variable, char *value);
   	//sleep
     void sleepMode(void);
   	//str
@@ -81,6 +66,7 @@ class BGX13
   	//uartu
     void updateUartSettings(void);
   	//uevt
+    void userEventTrigger(int functionNumber, bool assertHigh, int gpioNumber);
   	//ufu
     void userFunctionAssign(int number, char* function);
   	//ulast

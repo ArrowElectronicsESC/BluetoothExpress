@@ -7,8 +7,8 @@
 
 #define BUS_MODE_PIN 6 //Default Pin for BGX13 Arduino Shield 
 //This will change the pin configuration for arduino only
-#define COMMAND_MODE digitalWrite(BUS_MODE_PIN, LOW)
-#define STREAM_MODE digitalWrite(BUS_MODE_PIN, HIGH)
+#define SET_COMMAND_MODE() digitalWrite(BUS_MODE_PIN, LOW)
+#define SET_STREAM_MODE() digitalWrite(BUS_MODE_PIN, HIGH)
 
 #define RX_PIN 4
 #define TX_PIN 5
@@ -16,7 +16,7 @@
 #define UART_BUFFER_SIZE 200
 #define RESET_UART_RX _uart_rx_write_ptr = 0
 
-#define READ_DELAY 5
+#define READ_DELAY 20
 #define ADDRESS_END_INDEX 22
 #define ADDRESS_INDEX 10
 #define VERSION_BEGIN 5
@@ -33,7 +33,7 @@
 #define SCAN 						"scan"
 #define SAVE						"save"
 #define SLEEP						"sleep"
-#define SET_STREAM_MODE				"str"
+#define STREAM_MODE		      		"str"
 #define UPDATE_UART_SETTINGS		"uartu"
 #define GET_LAST_USER_FUNC_STATUS	"ulast"
 #define WAKE						"wake"
@@ -59,6 +59,15 @@ enum BGX_states{
 	RUNNING
 };
 
+enum BGX_input_direction {
+	INPUT_DIRECTION_IN = 0,
+	INPUT_DIRECTION_IN_PULLDOWN,
+	INPUT_DIRECTION_IN_PULLUP,
+	INPUT_DIRECTION_INTERRUPT,
+	INPUT_DIRECTION_INTERRUPT_PULLUP,
+	INPUT_DIRECTION_INTERRUPT_PULLDOWN
+};
+
 static const char * inDirections[] = { 
     "in", //0
     "ipd", //1
@@ -66,6 +75,12 @@ static const char * inDirections[] = {
     "inw", //3
     "ipuw", //4
     "ipdw" //5
+};
+
+enum BGX_output_direction {
+	OUTPUT_DIRECTION_LOW = 0,
+	OUTPUT_DIRECTION_HIGH,
+	OUTPUT_DIRECTION_HIGH_Z
 };
 
 static const char * outDirections[] = {

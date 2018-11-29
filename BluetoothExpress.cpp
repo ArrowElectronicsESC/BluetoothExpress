@@ -18,7 +18,7 @@ BGX13::BGX13(SoftwareSerial *arduinoSoftSerial){
   _bgxSerial = arduinoSoftSerial;
   pinMode(BUS_MODE_PIN, OUTPUT);
   _swSerial = true;
-  COMMAND_MODE; //Sets command mode
+  SET_COMMAND_MODE(); //Sets command mode
 }
 #endif
 
@@ -27,7 +27,7 @@ BGX13::BGX13(HardwareSerial  *arduinoHardwareSerial){
   _bgxSerial = arduinoHardwareSerial;
   pinMode(BUS_MODE_PIN, OUTPUT);
   _swSerial = false;
-  COMMAND_MODE; //Sets command mode
+  SET_COMMAND_MODE(); //Sets command mode
 }
 
 void BGX13::serialBegin(long baud) {
@@ -52,32 +52,21 @@ void BGX13::serialConnect(long baud){
   serialBegin(baud);
   delay(5);
   //_bgxSerial->println("clrb");
-  _bgxSerial->println("fac D0CF5ED8FCE0"); //Set the indicator high when in stream mode
-  //factoryReset();
+  factoryReset();
   delay(500);
-  //ecb remoVE
-  _bgxSerial->println("gfu 4 str_active"); //Set the indicator high when in stream mode
-  delay(5);
-  _bgxSerial->println("set bu s c level"); //Set to Logic Level Bus Mode Control
-  delay(5);
-  _bgxSerial->println("gfu 0 str_select"); //set gpio as bus control
-  delay(5);
-  _bgxSerial->println("gdi 0 olo"); //SET GPIO to out low-init
-  delay(5);
-  _bgxSerial->println("gfu 2 stdio"); 
-  delay(5);
-  _bgxSerial->println("gdi 2 ipu");   
-  delay(5);
-  _bgxSerial->println("gfu 3 stdio"); 
-  delay(5);
-  _bgxSerial->println("gdi 3 ipu");  
-  delay(5);
+  SET_COMMAND_MODE();
+  selectGPIOFunction(4, "str_active");
+  setVariable("bu", "s c level");
+  selectGPIOFunction(0, "str_select");
+  gpioSetOut(0, OUTPUT_DIRECTION_LOW);
+  selectGPIOFunction(2, "stdio"); 
+  gpioSetIn(2, INPUT_DIRECTION_IN_PULLUP);  
+  selectGPIOFunction(3, "stdio");
+  gpioSetIn(3, INPUT_DIRECTION_IN_PULLUP);
   
-
-  BGXRead();//ECB replace above with command calls
   RESET_UART_RX; 
   delay(10);
-  STREAM_MODE; //Sets stream mode
+  SET_STREAM_MODE(); //Sets stream mode
   delay(5);
 }
 
@@ -140,7 +129,7 @@ void BGX13::getBGXBuffer(char* data){
 
 
 void BGX13::sendCommand(int readTime = 0) {
-  COMMAND_MODE; //Sets COMMAND mode
+  SET_COMMAND_MODE(); //Sets COMMAND mode
   BGXRead();
   _uart_rx_write_ptr=0;
   _bgxSerial->println(_uart_tx_buffer);
@@ -154,11 +143,11 @@ void BGX13::sendCommand(int readTime = 0) {
   //BGXRead(); //Eat the output
 
   
-  STREAM_MODE; //Sets stream mode
+  SET_STREAM_MODE(); //Sets stream mode
 }
 
 void BGX13::sendString(char* toSend) {
-  STREAM_MODE; //Sets COMMAND mode
+  SET_STREAM_MODE(); //Sets COMMAND mode
   BGXRead();
   _uart_rx_write_ptr = 0;
   _bgxSerial->println(toSend);
@@ -194,16 +183,16 @@ void BGX13::disconnect(void){
 
 void BGX13::factoryReset(void){
   String command = FACTORY_RESET;
-  COMMAND_MODE; //Sets COMMAND mode
+  SET_COMMAND_MODE(); //Sets COMMAND mode
   BGXRead();
   _uart_rx_write_ptr = 0;
   _bgxSerial->println(GET_BT_ADDR);
-  //_bgxSerial->println("fac D0CF5ED8FCE0");  BGXRead();
-  _uart_rx_buffer[ADDRESS_INDEX] = NULL;
+  BGXRead();
+  _uart_rx_buffer[ADDRESS_END_INDEX] = NULL;
   command += &_uart_rx_buffer[ADDRESS_INDEX];
   _bgxSerial->println(command);
   BGXRead();
-  STREAM_MODE; //Sets stream mode
+  SET_STREAM_MODE(); //Sets stream mode
 }
 
 /* Directions are as follows:
@@ -214,7 +203,7 @@ void BGX13::factoryReset(void){
     "ipuw", //4
     "ipdw" //5
 */
-void BGX13::gpioSetIn(int number, int direction, int debounce) {
+void BGX13::gpioSetIn(int number, BGX_input_direction direction, int debounce=-1) {
   String command = "gdi ";
   if (direction > 5) {
     return;
@@ -222,10 +211,9 @@ void BGX13::gpioSetIn(int number, int direction, int debounce) {
   command += number;
   command += SPACE;
   command += inDirections[direction];
-  command += SPACE;
 
   if (debounce >= 0 && debounce < 10) {
-    command += "db";
+    command += " db";
     command += debounce;
   }
 
@@ -247,7 +235,7 @@ void BGX13::gpioSetIn(int number, int direction, int debounce) {
     "drvst", //0
     "drvwk" //1
 */
-void BGX13::gpioSetOut(int number, int direction, int mode, int pullResistor, int driveStrength){
+void BGX13::gpioSetOut(int number, BGX_output_direction direction, int mode=-1, bool enablePullResistor=true, int driveStrength=0){
   String command = "gdi ";
   if(direction > 2) return;
   if(mode > 2) return;
@@ -260,7 +248,7 @@ void BGX13::gpioSetOut(int number, int direction, int mode, int pullResistor, in
   //command += pushPullModes[mode];
   if (mode == 1 || mode == 2) {
     command += SPACE;
-    if (pullResistor) {
+    if (enablePullResistor) {
       command += "pren";
     } else {
       command += "prdi";
@@ -294,7 +282,7 @@ void BGX13::sleepMode(void){
 }
 
 void BGX13::streamMode(void){
-  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, SET_STREAM_MODE);
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, STREAM_MODE);
   sendCommand();
 }
 
@@ -325,13 +313,13 @@ void BGX13::userFunctionRun(int number){
 }
 
 void BGX13::getVersion(char *ver){
-  COMMAND_MODE; //Sets COMMAND mode
+  SET_COMMAND_MODE(); //Sets COMMAND mode
   BGXRead(); //needed to ensure the buffer is clear
   _uart_rx_write_ptr = 0;
   _bgxSerial->println("ver");
   BGXRead();
   strcpy(ver, &_uart_rx_buffer[VERSION_BEGIN]);
-  STREAM_MODE; //Sets stream mode
+  SET_STREAM_MODE(); //Sets stream mode
 }
 
 void BGX13::wake(void){
@@ -339,9 +327,40 @@ void BGX13::wake(void){
   sendCommand(); 
 }
 
+void BGX13::getVariable(char *variable, char *buffer, int length) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "get %s", variable);
+  sendCommand();
+  BGXRead();
+  strncpy(buffer, _uart_rx_buffer, length);
+}
 
+void BGX13::selectGPIOFunction(int gpioNumber, char *function) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "gfu %d %s", gpioNumber, function);
+  sendCommand();
+}
 
+void BGX13::setVariable(char *variable, char *name) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "set %s %s", variable, name);
+  sendCommand();
+}
 
+int BGX13::getGPIOValue(int number) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "gge %d", number);
+  sendCommand();
+  BGXRead();
+  // Index 7 is the index of the return value of the gge function after the bgx echos the function name
+  return (_uart_rx_buffer[7] == '1');
+}
+
+void BGX13::setGPIOValue(int number, int value) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "gse %d %d", number, value);
+  sendCommand();
+}
+
+void BGX13::userEventTrigger(int functionNumber, bool assertHigh, int gpioNumber) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "uevt %d %s %d", functionNumber, (assertHigh ? "hi" : "lo"), gpioNumber);
+  sendCommand();
+}
 
 BGX13::~BGX13(void){
   __asm__("nop");
