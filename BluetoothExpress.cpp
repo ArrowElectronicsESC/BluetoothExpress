@@ -181,16 +181,15 @@ void BGX13::disconnect(void){
   sendCommand();
 }
 
-void BGX13::factoryReset(void){
-  String command = FACTORY_RESET;
+void BGX13::factoryReset(void) {
   SET_COMMAND_MODE(); //Sets COMMAND mode
   BGXRead();
   _uart_rx_write_ptr = 0;
   _bgxSerial->println(GET_BT_ADDR);
   BGXRead();
   _uart_rx_buffer[ADDRESS_END_INDEX] = NULL;
-  command += &_uart_rx_buffer[ADDRESS_INDEX];
-  _bgxSerial->println(command);
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, FACTORY_RESET "%s", &_uart_rx_buffer[ADDRESS_INDEX]);
+  _bgxSerial->println(_uart_tx_buffer);
   BGXRead();
   SET_STREAM_MODE(); //Sets stream mode
 }
@@ -203,21 +202,24 @@ void BGX13::factoryReset(void){
     "ipuw", //4
     "ipdw" //5
 */
+//TODO(andrew): Test this since it doesn't use std::String anymore
 void BGX13::gpioSetIn(int number, BGX_input_direction direction, int debounce=-1) {
-  String command = "gdi ";
+  //String command = "gdi ";
   if (direction > 5) {
     return;
   }
-  command += number;
-  command += SPACE;
-  command += inDirections[direction];
+  int charsAdded = snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "gdi %d %s", number, inDirections[direction]);
+  //command += number;
+  //command += SPACE;
+  //command += inDirections[direction];
 
   if (debounce >= 0 && debounce < 10) {
-    command += " db";
-    command += debounce;
+    //command += " db";
+    //command += debounce;
+    snprintf(_uart_tx_buffer + charsAdded, (UART_BUFFER_SIZE - charsAdded), "db %d", debounce);
   }
 
-  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  //snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
   sendCommand();
 }
 
@@ -292,11 +294,7 @@ void BGX13::updateUartSettings(void){
 }
 
 void BGX13::userFunctionAssign(int number, char* function){
-  String command = "ufu ";
-  command += number;
-  command += SPACE;
-  command += function;
-  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "ufu %d %s", number, function);
   sendCommand();
 }
 
@@ -305,10 +303,8 @@ void BGX13::getLastUserFunctionResult(){
   sendCommand();
 }
 
-void BGX13::userFunctionRun(int number){
-  String command = "urun ";
-  command += number;
-  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, command.c_str());
+void BGX13::userFunctionRun(int number) {
+  snprintf(_uart_tx_buffer, UART_BUFFER_SIZE, "urun %d", number);
   sendCommand();
 }
 
