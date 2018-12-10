@@ -1,0 +1,1 @@
+requires installation of kivy as per: https://kivy.org/doc/stable/installation/installation-windows.html#install-win-dist

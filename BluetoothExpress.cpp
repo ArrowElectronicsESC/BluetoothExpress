@@ -63,6 +63,10 @@ void BGX13::serialConnect(long baud){
   gpioSetIn(2, INPUT_DIRECTION_IN_PULLUP);  
   selectGPIOFunction(3, "stdio");
   gpioSetIn(3, INPUT_DIRECTION_IN_PULLUP);
+  selectGPIOFunction(7, "stdio");
+  selectGPIOFunction(6, "stdio");
+  gpioSetIn(7, INPUT_DIRECTION_IN);
+  gpioSetIn(6, INPUT_DIRECTION_IN);
   
   RESET_UART_RX; 
   delay(10);
